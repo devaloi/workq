@@ -63,7 +63,7 @@ func (p *Processor) Process(ctx context.Context) bool {
 
 	// Check if the job has exceeded max attempts (Fail increments Attempts).
 	// The queue.Fail marks it dead internally; add to dead letter store.
-	if job.Attempts+1 >= job.MaxAttempts && p.dead != nil {
+	if job.Attempts >= job.MaxAttempts && p.dead != nil {
 		job.Status = domain.StatusDead
 		p.dead.Add(job)
 	}
