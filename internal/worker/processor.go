@@ -81,7 +81,7 @@ func (p *Processor) execute(ctx context.Context, job *domain.Job) (retErr error)
 
 	h, err := p.registry.Lookup(job.Type)
 	if err != nil {
-		return err
+		return fmt.Errorf("handler lookup for %s: %w", job.Type, err)
 	}
 
 	return h(ctx, job.Payload)

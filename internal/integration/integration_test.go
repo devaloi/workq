@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -125,14 +126,14 @@ func TestIntegration_PriorityOrdering(t *testing.T) {
 	mq := queue.NewMemoryQueue()
 	defer mq.Close()
 
-	var orderMu atomic.Value
-	orderMu.Store([]string{})
+	var orderMu sync.Mutex
+	var order []string
 
 	reg := handler.NewRegistry()
 	_ = reg.Register("ordered", func(_ context.Context, payload []byte) error {
-		cur := orderMu.Load().([]string)
-		cur = append(cur, string(payload))
-		orderMu.Store(cur)
+		orderMu.Lock()
+		order = append(order, string(payload))
+		orderMu.Unlock()
 		return nil
 	})
 
@@ -151,15 +152,18 @@ func TestIntegration_PriorityOrdering(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	pool.Shutdown(5 * time.Second)
 
-	order := orderMu.Load().([]string)
-	if len(order) != 5 {
-		t.Fatalf("expected 5 processed, got %d", len(order))
+	orderMu.Lock()
+	orderCopy := make([]string, len(order))
+	copy(orderCopy, order)
+	orderMu.Unlock()
+	if len(orderCopy) != 5 {
+		t.Fatalf("expected 5 processed, got %d", len(orderCopy))
 	}
 
-	for i, got := range order {
+	for i, got := range orderCopy {
 		expected := fmt.Sprintf("p%d", i+1)
 		if got != expected {
-			t.Fatalf("position %d: expected %s, got %s (order: %v)", i, expected, got, order)
+			t.Fatalf("position %d: expected %s, got %s (order: %v)", i, expected, got, orderCopy)
 		}
 	}
 }

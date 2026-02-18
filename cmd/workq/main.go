@@ -25,18 +25,16 @@ func main() {
 
 	// Create queue (persistent if path configured).
 	var q queue.Queue
-	mq := queue.NewMemoryQueue()
 	if cfg.PersistPath != "" {
 		pq, err := queue.NewPersistentQueue(cfg.PersistPath)
 		if err != nil {
 			log.Fatalf("Failed to create persistent queue: %v", err)
 		}
 		q = pq
-		defer pq.Close()
 	} else {
-		q = mq
-		defer mq.Close()
+		q = queue.NewMemoryQueue()
 	}
+	defer q.Close()
 
 	// Set up handler registry.
 	reg := handler.NewRegistry()

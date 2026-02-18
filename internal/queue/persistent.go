@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 
@@ -26,9 +27,9 @@ func NewPersistentQueue(path string) (*PersistentQueue, error) {
 	}
 
 	// Wire up change notification for auto-snapshot.
-	mq.OnChange = func(jobs []*domain.Job) {
+	mq.SetOnChange(func(jobs []*domain.Job) {
 		pq.snapshotWith(jobs)
-	}
+	})
 
 	// Load existing state if file exists.
 	if err := pq.load(); err != nil {
@@ -49,7 +50,7 @@ func (pq *PersistentQueue) load() error {
 		if os.IsNotExist(err) {
 			return nil
 		}
-		return err
+		return fmt.Errorf("reading state file: %w", err)
 	}
 
 	var state persistedState
@@ -76,7 +77,9 @@ func (pq *PersistentQueue) snapshotWith(jobs []*domain.Job) {
 	if err := os.WriteFile(tmp, data, 0644); err != nil {
 		return
 	}
-	_ = os.Rename(tmp, pq.path)
+	if err := os.Rename(tmp, pq.path); err != nil {
+		log.Printf("workq: failed to rename snapshot file: %v", err)
+	}
 }
 
 func (pq *PersistentQueue) Enqueue(ctx context.Context, job *domain.Job) error {

@@ -22,4 +22,5 @@ type Queue interface {
 	Ack(ctx context.Context, id string) error
 	Fail(ctx context.Context, id string, jobErr error) error
 	Stats(ctx context.Context) (*Stats, error)
+	Close()
 }

@@ -47,7 +47,7 @@ func NewJob(jobType string, payload []byte, maxAttempts int) (*Job, error) {
 // TransitionTo attempts to change the job status.
 func (j *Job) TransitionTo(s Status) error {
 	if err := ValidateTransition(j.Status, s); err != nil {
-		return err
+		return fmt.Errorf("transition to %s: %w", s, err)
 	}
 	j.Status = s
 	if s == StatusCompleted {

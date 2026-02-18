@@ -23,7 +23,14 @@ func DefaultBackoff() *Backoff {
 }
 
 // NextDelay returns the backoff delay for the given attempt number (0-indexed).
+// The exponent is capped to prevent floating-point overflow at high attempt counts.
 func (b *Backoff) NextDelay(attempt int) time.Duration {
+	// Cap exponent at 62 to avoid float64 overflow (2^63 exceeds int64 range).
+	const maxExponent = 62
+	if attempt > maxExponent {
+		attempt = maxExponent
+	}
+
 	exp := math.Pow(2, float64(attempt))
 	delay := time.Duration(float64(b.Base) * exp)
 
@@ -34,7 +41,7 @@ func (b *Backoff) NextDelay(attempt int) time.Duration {
 	}
 
 	// Cap at max.
-	if delay > b.Max {
+	if b.Max > 0 && delay > b.Max {
 		delay = b.Max
 	}
 

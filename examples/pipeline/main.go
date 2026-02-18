@@ -30,7 +30,9 @@ func main() {
 		var data struct {
 			URL string `json:"url"`
 		}
-		_ = json.Unmarshal(payload, &data)
+		if err := json.Unmarshal(payload, &data); err != nil {
+			return fmt.Errorf("unmarshaling fetch payload: %w", err)
+		}
 		time.Sleep(time.Duration(50+rand.Intn(100)) * time.Millisecond)
 		log.Printf("  📥 Fetched: %s", data.URL)
 
@@ -46,7 +48,9 @@ func main() {
 		var data struct {
 			URL string `json:"url"`
 		}
-		_ = json.Unmarshal(payload, &data)
+		if err := json.Unmarshal(payload, &data); err != nil {
+			return fmt.Errorf("unmarshaling process payload: %w", err)
+		}
 		time.Sleep(time.Duration(100+rand.Intn(150)) * time.Millisecond)
 
 		if rand.Float64() < 0.2 {
@@ -67,7 +71,9 @@ func main() {
 		var data struct {
 			URL string `json:"url"`
 		}
-		_ = json.Unmarshal(payload, &data)
+		if err := json.Unmarshal(payload, &data); err != nil {
+			return fmt.Errorf("unmarshaling store payload: %w", err)
+		}
 		time.Sleep(time.Duration(30+rand.Intn(50)) * time.Millisecond)
 		log.Printf("  💾 Stored: %s", data.URL)
 		return nil

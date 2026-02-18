@@ -29,7 +29,9 @@ func main() {
 			To      string `json:"to"`
 			Subject string `json:"subject"`
 		}
-		_ = json.Unmarshal(payload, &data)
+		if err := json.Unmarshal(payload, &data); err != nil {
+			return fmt.Errorf("unmarshaling email payload: %w", err)
+		}
 
 		time.Sleep(time.Duration(50+rand.Intn(150)) * time.Millisecond)
 

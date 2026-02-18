@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+// Default configuration values.
+const (
+	DefaultConcurrency     = 4
+	DefaultMaxRetries      = 5
+	DefaultBackoffBase     = 1 * time.Second
+	DefaultBackoffMax      = 5 * time.Minute
+	DefaultJitterMax       = 500 * time.Millisecond
+	DefaultShutdownTimeout = 30 * time.Second
+)
+
 // Config holds all workq configuration.
 type Config struct {
 	Concurrency    int           // number of worker goroutines
@@ -20,13 +30,13 @@ type Config struct {
 // Default returns a Config with sensible defaults.
 func Default() Config {
 	return Config{
-		Concurrency:     4,
-		MaxRetries:      5,
-		BackoffBase:     1 * time.Second,
-		BackoffMax:      5 * time.Minute,
-		JitterMax:       500 * time.Millisecond,
+		Concurrency:     DefaultConcurrency,
+		MaxRetries:      DefaultMaxRetries,
+		BackoffBase:     DefaultBackoffBase,
+		BackoffMax:      DefaultBackoffMax,
+		JitterMax:       DefaultJitterMax,
 		PersistPath:     "",
-		ShutdownTimeout: 30 * time.Second,
+		ShutdownTimeout: DefaultShutdownTimeout,
 	}
 }
 

@@ -46,9 +46,9 @@ type MemoryQueue struct {
 	dead      int
 	closed    bool
 
-	// OnChange is called after state mutations (for persistence layer).
-	// Called with mu held — must not re-lock.
-	OnChange func(jobs []*domain.Job)
+	// onChange is called after state mutations (for persistence layer).
+	// Must be set via SetOnChange before the queue is used. Called with mu held.
+	onChange func(jobs []*domain.Job)
 }
 
 // NewMemoryQueue creates a new in-memory queue.
@@ -62,9 +62,18 @@ func NewMemoryQueue() *MemoryQueue {
 }
 
 func (mq *MemoryQueue) notifyChange() {
-	if mq.OnChange != nil {
-		mq.OnChange(mq.snapshotUnlocked())
+	if mq.onChange != nil {
+		mq.onChange(mq.snapshotUnlocked())
 	}
+}
+
+// SetOnChange registers a callback invoked after state mutations.
+// Must be called before the queue is used. The callback is invoked
+// with the queue mutex held — it must not re-lock.
+func (mq *MemoryQueue) SetOnChange(fn func(jobs []*domain.Job)) {
+	mq.mu.Lock()
+	defer mq.mu.Unlock()
+	mq.onChange = fn
 }
 
 // Enqueue adds a job to the queue.
@@ -84,6 +93,9 @@ func (mq *MemoryQueue) Enqueue(_ context.Context, job *domain.Job) error {
 }
 
 // Dequeue blocks until a job is available or the context is cancelled.
+//
+// Uses a single reusable timer to wake on delayed jobs, avoiding goroutine
+// leaks that would occur with time.After or per-iteration goroutines.
 func (mq *MemoryQueue) Dequeue(ctx context.Context) (*domain.Job, error) {
 	done := make(chan struct{})
 	defer close(done)
@@ -98,6 +110,13 @@ func (mq *MemoryQueue) Dequeue(ctx context.Context) (*domain.Job, error) {
 	mq.mu.Lock()
 	defer mq.mu.Unlock()
 
+	var delayTimer *time.Timer
+	defer func() {
+		if delayTimer != nil {
+			delayTimer.Stop()
+		}
+	}()
+
 	for {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -110,7 +129,11 @@ func (mq *MemoryQueue) Dequeue(ctx context.Context) (*domain.Job, error) {
 		bestIdx := -1
 		var earliest time.Time
 
-		// Scan for the best ready job (ready = ScheduledAt <= now).
+		// Priority selection: scan all pending jobs and pick the best ready one.
+		// "Ready" means ScheduledAt <= now. Among ready jobs, prefer lower Priority
+		// value (higher urgency), breaking ties by earlier ScheduledAt (FIFO within
+		// the same priority level). This linear scan is used instead of heap.Pop
+		// because delayed jobs may sit at the heap root but aren't eligible yet.
 		for i, j := range mq.pending {
 			if j.ScheduledAt.After(now) {
 				if earliest.IsZero() || j.ScheduledAt.Before(earliest) {
@@ -136,14 +159,17 @@ func (mq *MemoryQueue) Dequeue(ctx context.Context) (*domain.Job, error) {
 			return job, nil
 		}
 
-		// No ready jobs; set a timer for the nearest delayed job.
+		// No ready jobs; schedule a wake-up for the nearest delayed job.
 		if !earliest.IsZero() {
 			delay := time.Until(earliest)
+			if delayTimer == nil {
+				delayTimer = time.NewTimer(delay)
+			} else {
+				delayTimer.Reset(delay)
+			}
 			go func() {
-				timer := time.NewTimer(delay)
-				defer timer.Stop()
 				select {
-				case <-timer.C:
+				case <-delayTimer.C:
 					mq.cond.Broadcast()
 				case <-done:
 				}
