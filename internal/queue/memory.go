@@ -47,7 +47,8 @@ type MemoryQueue struct {
 	closed    bool
 
 	// OnChange is called after state mutations (for persistence layer).
-	OnChange func()
+	// Called with mu held — must not re-lock.
+	OnChange func(jobs []*domain.Job)
 }
 
 // NewMemoryQueue creates a new in-memory queue.
@@ -62,7 +63,7 @@ func NewMemoryQueue() *MemoryQueue {
 
 func (mq *MemoryQueue) notifyChange() {
 	if mq.OnChange != nil {
-		mq.OnChange()
+		mq.OnChange(mq.snapshotUnlocked())
 	}
 }
 
@@ -225,14 +226,17 @@ func (mq *MemoryQueue) Close() {
 func (mq *MemoryQueue) Snapshot() []*domain.Job {
 	mq.mu.Lock()
 	defer mq.mu.Unlock()
+	return mq.snapshotUnlocked()
+}
 
+// snapshotUnlocked returns copies without locking (caller must hold mu).
+func (mq *MemoryQueue) snapshotUnlocked() []*domain.Job {
 	jobs := make([]*domain.Job, 0, mq.pending.Len()+len(mq.active))
 	for _, j := range mq.pending {
 		cp := *j
 		jobs = append(jobs, &cp)
 	}
 	for _, j := range mq.active {
-		// Save active jobs as pending so they'll be retried on restart.
 		cp := *j
 		cp.Status = domain.StatusPending
 		jobs = append(jobs, &cp)
