@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 
 	"github.com/devaloi/workq/internal/domain"
 )
@@ -15,7 +14,6 @@ import (
 type PersistentQueue struct {
 	mq   *MemoryQueue
 	path string
-	mu   sync.Mutex
 }
 
 // NewPersistentQueue creates a queue that persists state to the given file path.

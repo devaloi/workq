@@ -1,5 +1,7 @@
 # workq
 
+[![CI](https://github.com/devaloi/workq/actions/workflows/ci.yml/badge.svg)](https://github.com/devaloi/workq/actions/workflows/ci.yml)
+
 A background job queue in Go with in-memory priority scheduling, worker pools, exponential backoff retries, dead letter handling, and graceful shutdown.
 
 **Zero external dependencies.** Clone and run immediately — no Redis, no Docker, no setup.
