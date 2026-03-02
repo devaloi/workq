@@ -180,3 +180,7 @@ make coverage
 ## License
 
 MIT — see [LICENSE](LICENSE)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). PRs welcome — run `make all` before submitting.
