@@ -1,6 +1,9 @@
 # workq
 
 [![CI](https://github.com/devaloi/workq/actions/workflows/ci.yml/badge.svg)](https://github.com/devaloi/workq/actions/workflows/ci.yml)
+[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go)](https://go.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go Reference](https://pkg.go.dev/badge/github.com/devaloi/workq.svg)](https://pkg.go.dev/github.com/devaloi/workq)
 
 A background job queue in Go with in-memory priority scheduling, worker pools, exponential backoff retries, dead letter handling, and graceful shutdown.
 
